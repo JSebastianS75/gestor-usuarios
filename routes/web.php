@@ -4,6 +4,9 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\DocumentTypeController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\RoleController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -14,9 +17,22 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/home-superadministrador', function () {
+    return Inertia::render('HomeSuperAdministrador');
+})->middleware(['auth', 'verified', 'superadmin'])->name('home.superadministrador');
+
+Route::get('/home-administrador', function () {
+    return Inertia::render('HomeAdministrador');
+})->middleware(['auth', 'verified', 'administrador'])->name('home.administrador');
+
+Route::get('/home-usuario', function () {
+    return Inertia::render('HomeUsuario');
+})->middleware(['auth', 'verified', 'usuario'])->name('home.usuario');
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

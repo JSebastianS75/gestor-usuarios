@@ -22,7 +22,16 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Auth/Register');
+        $roles = \App\Models\Role::where('status', true)
+            ->whereRaw('LOWER(name) != ?', ['superadministrador'])
+            ->get(['id', 'name']);
+
+        $documentTypes = \App\Models\DocumentType::where('status', true)->get(['id', 'name']);
+
+        return Inertia::render('Auth/Register', [
+            'roles' => $roles,
+            'documentTypes' => $documentTypes,
+        ]);
     }
 
     /**
@@ -84,6 +93,17 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        $role = strtolower($user->role->name);
+
+        if ($role === 'superadministrador') {
+            return redirect()->route('home.superadministrador');
+        }
+        if ($role === 'administrador') {
+            return redirect()->route('home.administrador');
+        }
+        if ($role === 'usuario') {
+            return redirect()->route('home.usuario');
+        }
+        return redirect()->route('dashboard');
     }
 }

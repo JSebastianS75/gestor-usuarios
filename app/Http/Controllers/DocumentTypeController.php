@@ -7,18 +7,15 @@ use Illuminate\Http\Request;
 
 class DocumentTypeController extends Controller
 {
-    // Lista todos los tipos de documento activos
+    // Lista todos los tipos de documento activos e inactivos
     public function index()
     {
         $actives = DocumentType::where('status', true)->get();
-        return response()->json(['document_types' => $actives]);
-    }
-
-    // Lista todos los tipos de documento inactivos
-    public function inactives()
-    {
         $inactives = DocumentType::where('status', false)->get();
-        return response()->json(['document_types' => $inactives]);
+        return \Inertia\Inertia::render('TiposDocumento', [
+            'documenttypes' => $actives,
+            'inactives' => $inactives,
+        ]);
     }
 
     // Crear un nuevo tipo de documento
@@ -29,14 +26,12 @@ class DocumentTypeController extends Controller
         ]);
 
         // Buscar si ya existe un tipo de documento con ese nombre
-        $existing = DocumentType::where('name', $request->name)->first();
-
+        $existing = DocumentType::whereRaw('LOWER(name) = ?', [strtolower($request->name)])->first();
         if ($existing) {
             if ($existing->status) {
                 return back()->withErrors(['name' => 'Ya existe un tipo de documento activo con ese nombre.']);
             } else {
-                // Si está inactivo, devolver un mensaje especial para ofrecer reactivación
-                return back()->withErrors(['name' => 'Este tipo de documento ya existe pero está inactivo. ¿Desea reactivarlo?']);
+                return back()->withErrors(['name' => 'Este tipo de documento ya existe pero está inactivo. Reactívalo para usarlo.']);
             }
         }
 
@@ -47,7 +42,7 @@ class DocumentTypeController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        return response()->json(['success' => true, 'document_type' => $documentType]);
+        return redirect()->route('tipos-documento.index')->with('success', 'Tipo de documento creado correctamente.');
     }
 
     // Reactivar un tipo de documento inactivo
@@ -63,7 +58,7 @@ class DocumentTypeController extends Controller
         $documentType->reactivated_by = auth()->id();
         $documentType->save();
 
-        return response()->json(['success' => true, 'document_type' => $documentType]);
+        return redirect()->route('tipos-documento.index')->with('success', 'Tipo de documento reactivado correctamente.');
     }
 
     // Actualizar un tipo de documento
@@ -93,7 +88,7 @@ class DocumentTypeController extends Controller
         $documentType->updated_by = auth()->id();
         $documentType->save();
 
-        return response()->json(['success' => true, 'document_type' => $documentType]);
+        return redirect()->route('tipos-documento.index')->with('success', 'Tipo de documento actualizado correctamente.');
     }
 
     // Inactivar un tipo de documento
@@ -109,7 +104,7 @@ class DocumentTypeController extends Controller
         $documentType->inactivated_by = auth()->id();
         $documentType->save();
 
-        return response()->json(['success' => true, 'document_type' => $documentType]);
+        // Redirige a la misma ruta para que Inertia recargue la página
+        return redirect()->route('tipos-documento.index')->with('success', 'Tipo de documento inactivado correctamente.');
     }
-
 }

@@ -2,21 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Role;
 use Illuminate\Http\Request;
 
 class RoleController extends Controller
 {
-    // Lista todos los roles activos
+    // Listar roles activos e inactivos
     public function index()
     {
         $actives = Role::where('status', true)->get();
-        return response()->json(['roles' => $actives]);
-    }
-    // Lista todos los roles inactivos
-    public function inactives()
-    {
         $inactives = Role::where('status', false)->get();
-        return response()->json(['roles' => $inactives]);
+        return \Inertia\Inertia::render('Roles', [
+            'roles' => $actives,
+            'inactives' => $inactives,
+        ]);
     }
     
     // Crear un nuevo rol
@@ -26,13 +25,13 @@ class RoleController extends Controller
             'name' => 'required|string|max:100',
         ]);
 
-        $existing = Role::where('name', $request->name)->first();
+        $existing = Role::whereRaw('LOWER(name) = ?', [strtolower($request->name)])->first();
 
         if ($existing) {
             if ($existing->status) {
                 return back()->withErrors(['name' => 'Ya existe un rol activo con ese nombre.']);
             } else {
-                return back()->withErrors(['name' => 'Este rol ya existe pero está inactivo. ¿Desea reactivarlo?']);
+                return back()->withErrors(['name' => 'Este rol ya existe pero está inactivo. Reactívalo para usarlo.']);
             }
         }
 
@@ -42,7 +41,7 @@ class RoleController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        return response()->json(['success' => true, 'role' => $role]);
+        return redirect()->route('roles.index')->with('success', 'Rol creado correctamente.');
     }
 
     // Reactivar un rol inactivo
@@ -58,7 +57,7 @@ class RoleController extends Controller
         $role->updated_by = auth()->id();
         $role->save();
 
-        return response()->json(['success' => true, 'role' => $role]);
+        return redirect()->route('roles.index')->with('success', 'Rol reactivado correctamente.');
     }
 
 
@@ -89,7 +88,7 @@ class RoleController extends Controller
         $role->updated_by = auth()->id();
         $role->save();
 
-        return response()->json(['success' => true, 'role' => $role]);
+        return redirect()->route('roles.index')->with('success', 'Rol actualizado correctamente.');
     }
 
     // Inactivar un rol
@@ -105,6 +104,6 @@ class RoleController extends Controller
         $role->inactivated_by = auth()->id();
         $role->save();
 
-        return response()->json(['success' => true, 'role' => $role]);
+        return redirect()->route('roles.index')->with('success', 'Rol inactivado correctamente.');
     }
 }

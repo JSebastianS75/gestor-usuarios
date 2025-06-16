@@ -6,21 +6,20 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class SuperAdminOnly
+class AdministradorOnly
 {
     /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle($request, \Closure $next): Response
+    public function handle(Request $request, Closure $next): Response
     {
         $user = auth()->user();
-        
-        $superAdminRole = \App\Models\Role::whereRaw('LOWER(name) = ?', ['superadministrador'])->first();
+        $adminRole = \App\Models\Role::whereRaw('LOWER(name) = ?', ['administrador'])->first();
 
-        if (!$user || !$superAdminRole || $user->role_id !== $superAdminRole->id) {
-            abort(403, 'Acceso solo para superadministradores');
+        if (!$user || !$adminRole || $user->role_id !== $adminRole->id) {
+            abort(403, 'Acceso solo para administradores');
         }
         return $next($request);
     }

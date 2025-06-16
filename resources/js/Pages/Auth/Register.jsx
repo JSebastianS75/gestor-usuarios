@@ -5,7 +5,7 @@ import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Register() {
+export default function Register({ roles, documentTypes }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         login: '',
         first_name: '',
@@ -53,7 +53,7 @@ export default function Register() {
                         name="login"
                         value={data.login}
                         className="mt-1 block w-full"
-                        maxlength={40}
+                        maxLength={40}
                         onChange={(e) => setData('login', e.target.value)}
                         required
                     />
@@ -103,10 +103,9 @@ export default function Register() {
                         className="mt-1 block w-full"
                     >
                         <option value="">Seleccione...</option>
-                        <option value="1">Cédula de Ciudadanía</option>
-                        <option value="2">Tarjeta de Identidad</option>
-                        <option value="3">Cédula de Extranjería</option>
-                        <option value="4">Pasaporte</option>
+                        {documentTypes.map(dt => (
+                            <option key={dt.id} value={dt.id}>{dt.name}</option>
+                        ))}
                     </select>
 
                     <InputError message={errors.document_type_id} className="mt-2" />
@@ -191,8 +190,9 @@ export default function Register() {
                         className="mt-1 block w-full"
                     >
                         <option value="">Seleccione...</option>
-                        <option value="1">Administrador</option>
-                        <option value="2">Usuario</option>
+                        {roles.map(role => (
+                            <option key={role.id} value={role.id}>{role.name}</option>
+                        ))}
                     </select>
 
                     <InputError message={errors.role_id} className="mt-2" />
@@ -239,6 +239,7 @@ export default function Register() {
                         autoComplete="new-password"
                         onChange={e => setData('password', e.target.value)}
                         required
+                        maxLength={200}
                     />
 
                     <InputError message={errors.password} className="mt-2" />
@@ -256,6 +257,7 @@ export default function Register() {
                         autoComplete="new-password"
                         onChange={e => setData('password_confirmation', e.target.value)}
                         required
+                        maxLength={200}
                     />
 
                     <InputError message={errors.password_confirmation || errors.password} className="mt-2" />
