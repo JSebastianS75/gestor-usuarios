@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 
 export default function TiposDocumento({ documenttypes, inactives }) {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState(null);
     const [showInactives, setShowInactives] = useState(false);
+    const [search, setSearch] = useState('');
+    const [viewing, setViewing] = useState(null);
+    const [showViewModal, setShowViewModal] = useState(false);
+
 
     // Formulario con useForm para crear/editar
     const { data, setData, post, put, reset, errors, clearErrors } = useForm({ name: '' });
@@ -73,6 +84,21 @@ export default function TiposDocumento({ documenttypes, inactives }) {
         }
     };
 
+    // Filtrar tipos de documento por búsqueda
+    const documenttypesToShow = search.trim()
+    ? documenttypes.filter(doc =>
+        doc.name.toLowerCase().includes(search.toLowerCase()) ||
+        String(doc.id).includes(search)
+      )
+    : documenttypes;
+
+    const inactivesToShow = search.trim()
+    ? inactives.filter(doc =>
+        doc.name.toLowerCase().includes(search.toLowerCase()) ||
+        String(doc.id).includes(search)
+      )
+    : inactives;
+
     return (
         <AuthenticatedLayout>
             <Head title="Tipos de Documento" />
@@ -90,6 +116,13 @@ export default function TiposDocumento({ documenttypes, inactives }) {
                     >
                         {showInactives ? 'Ver activos' : 'Ver inactivos'}
                     </button>
+                    <input
+                        type="text"
+                        placeholder="Buscar por nombre o ID"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="border px-2 py-1 rounded w-72"
+                    />
                 </div>
                 {/* Tabla de tipos de documento activos */}
                 {!showInactives ? (
@@ -102,13 +135,14 @@ export default function TiposDocumento({ documenttypes, inactives }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {documenttypes.map(doc => (
+                            {documenttypesToShow.map(doc => (
                                 <tr key={doc.id}>
                                     <td className="border px-4 py-2">{doc.id}</td>
                                     <td className="border px-4 py-2">{doc.name}</td>
                                     <td className="border px-4 py-2 flex gap-2">
                                         <button onClick={() => openEdit(doc)} className="text-indigo-700">Editar</button>
                                         <button onClick={() => inactivate(doc.id)} className="text-red-600">Inactivar</button>
+                                        <button onClick={() => {setViewing(doc); setShowViewModal(true);}} className="text-blue-600">Detalles</button>
                                     </td>
                                 </tr>
                             ))}
@@ -125,12 +159,13 @@ export default function TiposDocumento({ documenttypes, inactives }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {inactives.map(doc => (
+                            {inactivesToShow.map(doc => (
                                 <tr key={doc.id}>
                                     <td className="border px-4 py-2">{doc.id}</td>
                                     <td className="border px-4 py-2">{doc.name}</td>
-                                    <td className="border px-4 py-2">
+                                    <td className="border px-4 py-2 flex gap-2">
                                         <button onClick={() => reactivate(doc.id)} className="text-green-700">Reactivar</button>
+                                        <button onClick={() => {setViewing(doc); setShowViewModal(true);}} className="text-blue-600">Detalles</button>
                                     </td>
                                 </tr>
                             ))}
@@ -141,12 +176,12 @@ export default function TiposDocumento({ documenttypes, inactives }) {
                 {/* Modal para crear/editar */}
                 {showModal && (
                     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                        <div className="bg-white p-8 rounded shadow-md w-96 relative">
+                        <div className="bg-white p-8 rounded shadow-md w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
                             <button
                                 onClick={closeModal}
                                 className="absolute top-2 right-2 text-gray-400 hover:text-black"
                             >
-                                ×
+                                X
                             </button>
                             <h2 className="text-lg font-bold mb-4">{editing ? 'Editar tipo de documento' : 'Nuevo tipo de documento'}</h2>
                             <form onSubmit={handleSubmit}>
@@ -173,6 +208,31 @@ export default function TiposDocumento({ documenttypes, inactives }) {
                         </div>
                     </div>
                 )}
+        
+                {/* Modal para ver detalles */}
+                {showViewModal && viewing && (
+                    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                        <div className="bg-white p-8 rounded shadow-md w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+                        <button
+                            onClick={() => setShowViewModal(false)}
+                            className="absolute top-2 right-2 text-gray-400 hover:text-black"
+                        >
+                            X
+                        </button>
+                        <h2 className="text-lg font-bold mb-4">Detalle del tipo de documento</h2>
+                        <div className="mb-2"><b>ID:</b> {viewing.id}</div>
+                        <div className="mb-2"><b>Nombre:</b> {viewing.name}</div>
+                        <div className="mb-2"><b>Estado:</b> {viewing.status ? 'Activo' : 'Inactivo'}</div>
+                        <div className="mb-2"><b>Creado por (ID):</b> {viewing.created_by}</div>
+                        <div className="mb-2"><b>Fecha de creación:</b> {viewing.created_at ? dayjs(viewing.created_at).local().format('YYYY-MM-DD HH:mm:ss') : ''}</div>
+                        <div className="mb-2"><b>Modificado por (ID):</b> {viewing.updated_by}</div>
+                        <div className="mb-2"><b>Fecha de modificación:</b> {viewing.updated_at ? dayjs(viewing.updated_at).local().format('YYYY-MM-DD HH:mm:ss') : ''}</div>
+                        <div className="mb-2"><b>Inactivado por (ID):</b> {viewing.inactivated_by}</div>
+                        <div className="mb-2"><b>Fecha de inactivación:</b> {viewing.inactivated_at ? dayjs(viewing.inactivated_at).local().format('YYYY-MM-DD HH:mm:ss') : ''}</div>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </AuthenticatedLayout>
     );

@@ -57,7 +57,7 @@ class RegisteredUserController extends Controller
         ]);
 
         // Validar que no se pueda registrar como superadministrador
-        $superAdminRole = \App\Models\Role::where('name', 'superadministrador')->first(); // Cambia 'name' por 'slug' si tu columna es diferente
+        $superAdminRole = \App\Models\Role::whereRaw('LOWER(name) = ?', ['superadministrador'])->first();
         if ($superAdminRole && $request->role_id == $superAdminRole->id) {
             return back()->withErrors(['role_id' => 'No está permitido registrarse como superadministrador.'])->withInput();
         }

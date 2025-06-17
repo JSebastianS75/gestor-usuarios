@@ -27,7 +27,7 @@ class UserController extends Controller
         ]);
 
         // Validar máximo dos superadministradores activos
-        $superAdminRole = \App\Models\Role::where('name', 'superadministrador')->first();
+        $superAdminRole = \App\Models\Role::whereRaw('LOWER(name) = ?', ['superadministrador'])->first();
         if ($superAdminRole && $request->role_id == $superAdminRole->id) {
             $superAdminsCount = \App\Models\User::where('role_id', $superAdminRole->id)
                 ->where('status', true) 
@@ -65,7 +65,7 @@ class UserController extends Controller
             'created_by'         => auth()->id(), // <-- Auditoría: quién creó el usuario
         ]);
 
-        return response()->json(['success' => true]);
+        return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
     }
 
     public function update(Request $request, $id)
@@ -85,9 +85,9 @@ class UserController extends Controller
             // No pedimos password aquí por defecto
         ]);
 
-        $superAdminRole = \App\Models\Role::where('name', 'superadministrador')->first();
+        // Validar máximo dos superadministradores activos (excluyendo el usuario editado)
+        $superAdminRole = \App\Models\Role::whereRaw('LOWER(name) = ?', ['superadministrador'])->first();
         if ($superAdminRole && $request->role_id == $superAdminRole->id) {
-            // Contar superadmins activos, excluyendo el usuario que se está editando
             $superAdminsCount = \App\Models\User::where('role_id', $superAdminRole->id)
                 ->where('status', true)
                 ->where('id', '!=', $id)
@@ -109,12 +109,13 @@ class UserController extends Controller
         // Si se envía una nueva contraseña, cifrarla con RSA
         if ($request->filled('password')) {
             $publicKey = file_get_contents(storage_path('app/keys/public.pem'));
-            $rsa = PublicKeyLoader::load($publicKey)->withPadding(RSA::ENCRYPTION_PKCS1);
+            $rsa = \phpseclib3\Crypt\PublicKeyLoader::load($publicKey)->withPadding(\phpseclib3\Crypt\RSA::ENCRYPTION_PKCS1);
             $encryptedPassword = base64_encode($rsa->encrypt($request->password));
             $user->password = $encryptedPassword;
         }
 
         // Actualizar otros campos
+        $user->login              = strtolower($request->login);
         $user->first_name         = $request->first_name;
         $user->last_name          = $request->last_name;
         $user->document_type_id   = $request->document_type_id;
@@ -125,13 +126,16 @@ class UserController extends Controller
         $user->role_id            = $request->role_id;
         $user->birth_date         = $request->birth_date;
 
+        // Auditoría: quién editó
         $user->updated_by = auth()->id();
+
         $user->save();
 
-        return response()->json(['success' => true, 'user' => $user]);
+        return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
     }
 
-    public function inactivate($id)
+
+    public function destroy($id)
     {
         $user = \App\Models\User::findOrFail($id);
 
@@ -142,9 +146,11 @@ class UserController extends Controller
 
         $user->status = false;
         $user->inactivated_by = auth()->id();
+        $user->inactivated_at = now();
+        $user->timestamps = false; // Esto evita que updated_at cambie
         $user->save();
 
-        return response()->json(['success' => true]);
+        return redirect()->route('usuarios.index')->with('success', 'Usuario inactivado correctamente.');
     }
 
     public function reactivate($id)
@@ -155,7 +161,7 @@ class UserController extends Controller
             return back()->withErrors(['status' => 'El usuario ya está activo.']);
         }
 
-        $superAdminRole = \App\Models\Role::where('name', 'superadministrador')->first();
+        $superAdminRole = \App\Models\Role::whereRaw('LOWER(name) = ?', ['superadministrador'])->first();
         if ($superAdminRole && $user->role_id == $superAdminRole->id) {
             $superAdminsCount = \App\Models\User::where('role_id', $superAdminRole->id)
                 ->where('status', true)
@@ -166,25 +172,29 @@ class UserController extends Controller
             }
         }
 
+        $user->timestamps = false; 
         $user->status = true;
-        $user->reactivated_by = auth()->id();
         $user->save();
 
-        return response()->json(['success' => true]);
+        return redirect()->route('usuarios.index')->with('success', 'Usuario reactivado correctamente.');
     }
 
 
     public function index()
     {
-        // Listar solo usuarios activos
         $users = \App\Models\User::where('status', true)->get();
-        return response()->json(['users' => $users]);
-    }
+        $inactives = \App\Models\User::where('status', false)->get();
+        $roles_activos = \App\Models\Role::where('status', true)->get();
+        $roles = \App\Models\Role::all();
+        $document_types = \App\Models\DocumentType::where('status', true)->get();
 
-    public function inactives()
-    {
-        // Listar solo usuarios inactivos
-        $users = \App\Models\User::where('status', false)->get();
-        return response()->json(['users' => $users]);
+        return \Inertia\Inertia::render('Usuarios', [
+            'users' => $users,
+            'inactives' => $inactives,
+            'roles' => $roles,
+            'document_types' => $document_types,
+            'roles_activos' => $roles_activos,
+            'document_types' => $document_types,
+        ]);
     }
 }

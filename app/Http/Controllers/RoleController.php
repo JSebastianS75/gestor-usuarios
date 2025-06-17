@@ -53,8 +53,8 @@ class RoleController extends Controller
             return back()->withErrors(['status' => 'El rol ya está activo.']);
         }
 
+        $role->timestamps = false;
         $role->status = true;
-        $role->updated_by = auth()->id();
         $role->save();
 
         return redirect()->route('roles.index')->with('success', 'Rol reactivado correctamente.');
@@ -102,6 +102,8 @@ class RoleController extends Controller
 
         $role->status = false;
         $role->inactivated_by = auth()->id();
+        $role->inactivated_at = now();
+        $role->timestamps = false;
         $role->save();
 
         return redirect()->route('roles.index')->with('success', 'Rol inactivado correctamente.');

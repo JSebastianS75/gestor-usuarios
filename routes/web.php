@@ -47,6 +47,11 @@ Route::middleware(['auth', 'superadmin'])->group(function () {
     Route::resource('roles', RoleController::class);
     Route::resource('tipos-documento', DocumentTypeController::class);
 
+    // Rutas personalizadas para métodos extra en usuarios
+    Route::post('/usuarios/{id}/reactivate', [UserController::class, 'reactivate'])
+    ->name('usuarios.reactivate')
+    ->middleware(['auth', 'superadmin']);
+
     // Rutas personalizadas para métodos extra en tipos de documento:
     Route::get('tipos-documento-inactivos', [DocumentTypeController::class, 'inactives'])
         ->name('tipos-documento.inactivos');
@@ -59,4 +64,5 @@ Route::middleware(['auth', 'superadmin'])->group(function () {
         ->name('roles.inactivos');
     Route::post('roles/{id}/reactivate', [RoleController::class, 'reactivate'])
         ->name('roles.reactivate');
+
 });

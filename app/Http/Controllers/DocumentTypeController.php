@@ -54,8 +54,8 @@ class DocumentTypeController extends Controller
             return back()->withErrors(['status' => 'El tipo de documento ya está activo.']);
         }
 
+        $documentType->timestamps = false;
         $documentType->status = true;
-        $documentType->reactivated_by = auth()->id();
         $documentType->save();
 
         return redirect()->route('tipos-documento.index')->with('success', 'Tipo de documento reactivado correctamente.');
@@ -102,6 +102,8 @@ class DocumentTypeController extends Controller
 
         $documentType->status = false;
         $documentType->inactivated_by = auth()->id();
+        $documentType->inactivated_at = now();
+        $documentType->timestamps = false;
         $documentType->save();
 
         // Redirige a la misma ruta para que Inertia recargue la página
