@@ -15,9 +15,10 @@ export default function Usuarios({ users, inactives,roles, roles_activos, docume
     const [showViewModal, setShowViewModal] = useState(false);
     const [viewing, setViewing] = useState(null);
     const [search, setSearch] = useState('');
+    const [modalKey, setModalKey] = useState(Date.now());
 
-    // Formulario para crear/editar usuario
-    const { data, setData, post, put, reset, errors, clearErrors } = useForm({
+    // Inicializar el formulario con useForm
+    const { data, setData, post, put, reset, errors, setErrors, clearErrors } = useForm({
         login: '',
         first_name: '',
         last_name: '',
@@ -53,7 +54,28 @@ export default function Usuarios({ users, inactives,roles, roles_activos, docume
         : inactives;
 
     // Funciones para abrir/cerrar modales
-    const openCreate = () => { reset(); clearErrors(); setEditing(null); setShowModal(true); };
+    const openCreate = () => {
+        reset({
+            login: '',
+            first_name: '',
+            last_name: '',
+            document_type_id: '',
+            document_number: '',
+            gender: '',
+            email: '',
+            mobile_phone: '',
+            role_id: '',
+            birth_date: '',
+            photo: null,
+            password: '',
+            password_confirmation: '',
+        });
+        clearErrors();
+        setEditing(null);
+        setModalKey(Date.now());
+        setShowModal(true);
+    };
+
     const openEdit = (user) => {
         setEditing(user);
         setData({
@@ -75,33 +97,33 @@ export default function Usuarios({ users, inactives,roles, roles_activos, docume
         setShowModal(true);
     };
     const openView = (user) => { setViewing(user); setShowViewModal(true); };
-    const closeModal = () => { clearErrors(); reset(); setShowModal(false); };
+    const closeModal = () => { clearErrors(); reset(); setEditing(null); setShowModal(false); };
     const closeViewModal = () => { setViewing(null); setShowViewModal(false); };
 
-    // Guardar usuario (crear o editar)
+    // Manejador de envío del formulario
     const handleSubmit = (e) => {
         e.preventDefault();
+
         const formData = new FormData();
-        Object.keys(data).forEach(key => {
-            if (data[key] !== null && data[key] !== undefined) {
-                formData.append(key, data[key]);
-            }
-        });
-        if (editing) {
-            formData.append('_method', 'PUT');
-            router.post(route('usuarios.update', editing.id), formData, {
-                forceFormData: true,
-                onSuccess: () => { closeModal(); router.reload({ only: ['users', 'inactives'] }); },
-                preserveScroll: true,
-            });
-        } else {
-            router.post(route('usuarios.store'), formData, {
-                forceFormData: true,
-                onSuccess: () => { closeModal(); router.reload({ only: ['users', 'inactives'] }); },
-                preserveScroll: true,
-            });
-        }
+        Object.entries(data).forEach(([k, v]) => formData.append(k, v ?? ''));
+
+        const cfg = {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                closeModal();
+                router.reload({ only: ['users', 'inactives'] });
+            },
+            onError: (err) => {
+                setErrors(err);
+            },
+        };
+
+        editing
+            ? put(route('usuarios.update', editing.id), formData, cfg)   // PUT para editar
+            : post(route('usuarios.store'), formData, cfg);              // POST para crear
     };
+
 
     // Inactivar y reactivar
     const inactivate = (id) => {
@@ -190,7 +212,7 @@ export default function Usuarios({ users, inactives,roles, roles_activos, docume
                 {/* Modal para crear/editar usuario */}
                 {showModal && (
                     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                        <div className="bg-white p-8 rounded shadow-md w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+                        <div key={modalKey} className="bg-white p-8 rounded shadow-md w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
                             <button onClick={closeModal} className="absolute top-2 right-2 text-gray-400 hover:text-black">X</button>
                             <h2 className="text-lg font-bold mb-4">{editing ? 'Editar usuario' : 'Nuevo usuario'}</h2>
                             <form onSubmit={handleSubmit} encType="multipart/form-data">
@@ -239,7 +261,7 @@ export default function Usuarios({ users, inactives,roles, roles_activos, docume
                                         </select>
                                         {errors.gender && <div className="text-red-500 text-sm">{errors.gender}</div>}
                                     </div>
-                                    <div className="w-1/2">
+                                    <div className="mb-4 w-1/2">
                                         <label className="block mb-1">Rol</label>
                                         <select value={data.role_id} onChange={e => setData('role_id', e.target.value)} className="w-full border px-2 py-1 rounded" required>
                                             <option value="">Seleccione...</option>

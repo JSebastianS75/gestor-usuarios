@@ -65,7 +65,7 @@ class UserController extends Controller
             'created_by'         => auth()->id(), // <-- Auditoría: quién creó el usuario
         ]);
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
+        return redirect()->back()->with('success', 'Usuario creado correctamente.');
     }
 
     public function update(Request $request, $id)
@@ -131,7 +131,7 @@ class UserController extends Controller
 
         $user->save();
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
+        return redirect()->back()->with('success', 'Usuario actualizado correctamente.');
     }
 
 
@@ -150,7 +150,7 @@ class UserController extends Controller
         $user->timestamps = false; // Esto evita que updated_at cambie
         $user->save();
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario inactivado correctamente.');
+        return redirect()->back()->with('success', 'Usuario inactivado correctamente.');
     }
 
     public function reactivate($id)
@@ -176,7 +176,7 @@ class UserController extends Controller
         $user->status = true;
         $user->save();
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario reactivado correctamente.');
+        return redirect()->back()->with('success', 'Usuario reactivado correctamente.');
     }
 
 

@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { Tooltip } from 'react-tooltip';
+import 'react-tooltip/dist/react-tooltip.css';
 
 export default function HomeSuperAdministrador() {
     const { auth } = usePage().props;
     const user = auth?.user;
     const [open, setOpen] = useState(false);
-
-    const opciones = [
-        { label: "Auditoría", href: "#" },
-        { label: "Configuración", href: "#" },
-        { label: "Reportes", href: "#" },
-    ];
 
     return (
         <AuthenticatedLayout>
@@ -40,15 +36,20 @@ export default function HomeSuperAdministrador() {
                             </div>
                         )}
                     </div>
-                    {/* Opciones adicionales */}
-                    {opciones.map(op => (
+                    {/* Solo Reportes con tooltip */}
+                    <div>
                         <button
-                            key={op.label}
+                            data-tooltip-id="reportes-tooltip"
+                            data-tooltip-content="Próximamente"
+                            data-tooltip-place="bottom"
                             className="px-6 py-2 bg-blue-700 text-white rounded hover:bg-blue-800"
+                            disabled
+                            style={{ cursor: 'not-allowed', opacity: 0.7 }}
                         >
-                            {op.label}
+                            Reportes
                         </button>
-                    ))}
+                        <Tooltip id="reportes-tooltip" />
+                    </div>
                 </nav>
             </div>
         </AuthenticatedLayout>

@@ -63,4 +63,10 @@ class User extends Authenticatable
     {
         return $this->belongsTo(\App\Models\Role::class, 'role_id');
     }
+
+    public function documentType()
+    {
+        return $this->belongsTo(\App\Models\DocumentType::class, 'document_type_id');
+    }
+
 }

@@ -14,8 +14,6 @@ export default function HomeUsuario() {
                 <h1 className="text-3xl font-bold mb-6">
                     Bienvenido Usuario, {user.first_name} {user.last_name}
                 </h1>
-                <p className="text-lg">Funcionalidades básicas del sistema.</p>
-                {/* Menú o accesos específicos para el usuario estándar */}
             </div>
         </AuthenticatedLayout>
     );

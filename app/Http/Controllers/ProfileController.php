@@ -16,48 +16,84 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit(Request $request): Response
+    public function edit(Request $request): \Inertia\Response
     {
-        return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+        return \Inertia\Inertia::render('Profile/Edit', [
+            'mustVerifyEmail' => $request->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail,
             'status' => session('status'),
+            'user' => $request->user()->load('role', 'documentType'),
+            'roles' => \App\Models\Role::where('status', true)->get(['id', 'name']),
+            'documentTypes' => \App\Models\DocumentType::where('status', true)->get(['id', 'name']),
         ]);
     }
 
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(Request $request)
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $rules = [
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'document_type_id' => 'required|exists:document_types,id',
+            'document_number' => 'required|string|max:30',
+            'gender' => 'required|in:M,F,O',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'mobile_phone' => 'required|string|max:20',
+            'birth_date' => 'required|date|before:today',
+            'photo' => 'nullable|image|max:2048',
+            // NO incluyas 'role_id'
+        ];
+
+        $validated = $request->validate($rules);
+
+        // Actualiza la foto si se envía
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $request->file('photo')->store('photos', 'public');
+        } else {
+            unset($validated['photo']);
         }
 
-        $request->user()->save();
+        $user->update($validated);
 
-        return Redirect::route('profile.edit');
+        return redirect()->back()->with('success', 'Perfil actualizado correctamente.');
     }
 
     /**
      * Delete the user's account.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request): \Illuminate\Http\RedirectResponse
     {
         $request->validate([
-            'password' => ['required', 'current_password'],
+            'password' => ['required', 'string'],
+        ], [
+            'password.required' => 'La contraseña es obligatoria.',
         ]);
 
         $user = $request->user();
 
-        Auth::logout();
+        // Descifrar la contraseña almacenada con la clave privada RSA
+        $privateKey = file_get_contents(storage_path('app/keys/private.pem'));
+        $rsa = \phpseclib3\Crypt\PublicKeyLoader::load($privateKey)
+            ->withPadding(\phpseclib3\Crypt\RSA::ENCRYPTION_PKCS1);
 
+        $decryptedPassword = $rsa->decrypt(base64_decode($user->password));
+
+        // Comparar la contraseña ingresada con la descifrada
+        if ($request->password !== $decryptedPassword) {
+            return back()->withErrors(['password' => 'La contraseña actual no es correcta.']);
+        }
+
+        // Procede a eliminar la cuenta (o inactivar, según tu lógica)
+        \Illuminate\Support\Facades\Auth::logout();
         $user->delete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return Redirect::to('/');
+        return redirect('/');
     }
+
 }
